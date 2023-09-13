@@ -25,3 +25,28 @@ them into one UI, for the following cases:
 2. to get more options.
 3. chat each others to make a sence design.
 4. prompt optimization.
+
+
+# Get Started
+
+install the requirements
+
+```
+pip install -r requirements.txt
+
+```
+
+start the server
+
+```
+python server.py --model_path "meta-llama/Llama-2-7b-chat-hf" --server_name "0.0.0.0"
+```
+
+note: remove the 'server_name' parameter if run on localhost.
+
+
+# Status
+
+
+This repository is under development. it may occur error when trying to run it, please feel free to open issue if any question.
+

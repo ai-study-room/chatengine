@@ -1,0 +1,11 @@
+inference:
+    type: models.llama2.inference
+
+device_map: "auto"
+model_path: "meta-llama/Llama-2-7b-chat-hf"
+torch_dtype: "float16"
+load_in_8bit: False
+max_new_token: 1024
+temperature: 0.7
+top_p: 1.0
+top_k: 40
