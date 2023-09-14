@@ -14,6 +14,7 @@ import torch
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from transformers import TextIteratorStreamer
+from typing import Iterator
 
 
 class Inference(BaseInference):
@@ -78,7 +79,8 @@ class Inference(BaseInference):
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         return tokenizer
 
-    def generate(self, msg: str, kwargs=None) -> str:
+    def generate(self, context: list[tuple[str, str]],
+                 kwargs=None) -> Iterator[str]:
         r'''
         inherited from BaseInference which generate the result
         according to the msg(prompt)
@@ -89,13 +91,22 @@ class Inference(BaseInference):
 
         max_new_tokens = self.cfg.max_new_token
         if max_new_tokens == 0:
-            max_new_tokens = 256
+            max_new_tokens = 1024
 
-        msg = self.compo_prompt(msg)
+        history = context[0:len(context) - 1]
+        prompt = context[-1][0]
+        msg = self.compo_prompt(prompt, history)
+
+        print(f"prompt='{prompt}'; instruction='{msg}'")
 
         inp = self.tokenizer([msg], return_tensors="pt").to("cuda")
 
-        streamer = TextIteratorStreamer(self.tokenizer)
+        streamer = TextIteratorStreamer(
+            self.tokenizer,
+            timeout=10.0,
+            skip_prompt=True,
+            skip_special_tokens=True,
+        )
 
         kwargs = dict(
             inp,

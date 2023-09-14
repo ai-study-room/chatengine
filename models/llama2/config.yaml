@@ -7,5 +7,5 @@ torch_dtype: "float16"
 load_in_8bit: False
 max_new_token: 1024
 temperature: 0.7
-top_p: 1.0
-top_k: 40
+top_p: 3.0
+top_k: 30

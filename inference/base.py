@@ -25,7 +25,7 @@ class BaseInference(object):
         super().__init__()
         self.cfg = cfg
 
-    def generate(self, msg: str, kwargs):
+    def generate(self, msg: list[tuple[str, str]], kwargs):
         r'''
         Provide the basic interface that return the generative text by a given model
 

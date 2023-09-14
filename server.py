@@ -15,11 +15,7 @@ import os
 from inference import *
 from inference.config import *
 from inference.get_inference import *
-
-
-def chatbot(input):
-
-    return input
+from typing import Iterator
 
 
 def _init_args():
@@ -47,18 +43,14 @@ def _init_args():
 
 def _startServer(server, server_address: str, server_port: str):
 
-    server.queue().launch(server_name=server_address, server_port=server_port)
+    server.queue()
+    server.launch(server_name=server_address, server_port=server_port)
 
 
 def _args_check(args):
 
     if args.model_path == "":
         raise ValueError
-
-
-def chatbot(inp):
-
-    return inp
 
 
 def main():
@@ -86,22 +78,31 @@ def main():
     if args.server_port != 8090:
         server_port = args.server_port
 
-    def clear_before_submit(inp, chatbot, chatbot2):
-        generator = inference.generate(inp)
+    def reply(
+            chatbot, chatbot2) -> (Iterator[list[tuple[str, str]]], Iterator[list[tuple[str, str]]]):
+        # inp = chatbot[-1][0]
+        streamer = inference.generate(chatbot)
         try:
-            bot_msg = next(generator)
+            bot_msg = next(streamer)
 
-            print(f'response msg "{bot_msg}"')
-            chatbot.append((inp, bot_msg))
-            chatbot2.append((inp, bot_msg))
-            return inp, chatbot, chatbot2
-        except StopIteration:
-            chatbot.append((inp,"error occur"))
-            chatbot2.append((inp,"error occur"))
-            return inp,chatbot,chatbot2
+            chatbot[-1][1] = "" + bot_msg
+            chatbot2[-1][1] = "" + bot_msg
+            yield chatbot, chatbot2
 
-    def display_result(inp):
-        return ""
+            for resp in streamer:
+                chatbot[-1][1] = resp
+                chatbot2[-1][1] = resp
+                yield chatbot, chatbot2
+
+        except StopIteration as si:
+            print(si)
+            chatbot.append((inp, "error occur1"))
+            chatbot2.append((inp, "error occur1"))
+            yield chatbot, chatbot1
+
+    def input_msg(inp, history_1, history_2):
+
+        return "", history_1 + [(inp, None)], history_2 + [(inp, None)]
 
     with gr.Blocks() as bl:
 
@@ -110,10 +111,12 @@ def main():
         with gr.Group():
             with gr.Row():
                 chatbot = gr.Chatbot(
-                    label="chatbot", show_lable=True, container=True)
-                chatbot2 = gr.Chatbot(label="chatbot2")
+                    label="Llama-2", show_label=True, container=True)
+                chatbot2 = gr.Chatbot(label="Llama-2")
             with gr.Row():
-                inp = gr.Textbox(placeholder="welcome to chat engine...")
+                inp = gr.Textbox(
+                    placeholder="welcome to chat engine...",
+                    show_label=False)
 
         with gr.Row():
             submit_btn = gr.Button("Submit")
@@ -121,18 +124,32 @@ def main():
 
         saved_input = gr.State()
 
-        submit_btn.click(
-            fn=clear_before_submit,
+        button_event_preprocess = (
+            submit_btn.click(
+                fn=input_msg,
+                inputs=[inp, chatbot, chatbot2],
+                outputs=[inp, chatbot, chatbot2],
+                api_name=False,
+                queue=False,
+            ).then(
+                fn=reply,
+                inputs=[chatbot, chatbot2],
+                outputs=[chatbot, chatbot2],
+                api_name=False,
+            )
+        )
+
+        inp.submit(
+            fn=input_msg,
             inputs=[inp, chatbot, chatbot2],
             outputs=[inp, chatbot, chatbot2],
             api_name=False,
             queue=False,
         ).then(
-            fn=display_result,
-            inputs=inp,
-            outputs=inp,
+            fn=reply,
+            inputs=[chatbot, chatbot2],
+            outputs=[chatbot, chatbot2],
             api_name=False,
-            queue=False,
         )
 
     _startServer(bl, server_address, server_port)
